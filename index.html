@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4-Stroke Twin Cylinder Diesel Engine ML Prediction & Performance Dashboard</title>
+  <meta name="description" content="AI/ML Intelligence Dashboard trained separately on 50W and 150W step augmented experimental diesel engine data. Complete Train/Test error calculations and thermodynamic visual analytics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Plotly.js for interactive high-performance charts -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Dashboard Header -->
+  <header class="dashboard-header">
+    <div class="brand-wrapper">
+      <div class="engine-icon">⚡</div>
+      <div>
+        <h1>4-Stroke Diesel Engine ML Performance Dashboard</h1>
+        <p class="header-subtitle">Kirloskar Twin-Cylinder CI Engine (14 HP / 10.64 kW @ 1500 RPM) — Dual ML Predictor</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-cyan" id="badge-train-split">🤖 75% Train / 25% Test Split</span>
+      <span class="badge badge-orange" id="badge-models">⚡ Models: 50W vs 150W Separate Grid</span>
+      <span class="badge badge-green" id="badge-status">● Live Engine Inference Active</span>
+    </div>
+  </header>
+
+  <!-- Interactive Control Station: 5 Manual Inputs -->
+  <section class="control-section" aria-labelledby="controls-heading">
+    <div class="section-title-row">
+      <h2 id="controls-heading" class="section-title">
+        <span>🎛️ Manual Sensor Inputs</span>
+      </h2>
+      <div class="presets-container" id="presets-container">
+        <button class="preset-btn" data-load="0" data-v="369" data-i="0" data-n="1542" data-dhw="141">0 W (No Load)</button>
+        <button class="preset-btn" data-load="750" data-v="387" data-i="1.05" data-n="1528" data-dhw="143.5">750 W</button>
+        <button class="preset-btn" data-load="1500" data-v="400" data-i="2.70" data-n="1525" data-dhw="146">1500 W (25%)</button>
+        <button class="preset-btn active" data-load="3000" data-v="412" data-i="5.63" data-n="1511" data-dhw="136">3000 W (50%)</button>
+        <button class="preset-btn" data-load="4500" data-v="415" data-i="8.27" data-n="1486" data-dhw="136">4500 W (75%)</button>
+        <button class="preset-btn" data-load="6000" data-v="417" data-i="10.50" data-n="1471" data-dhw="136">6000 W (100% Full)</button>
+      </div>
+    </div>
+
+    <!-- 5 Inputs Grid -->
+    <div class="inputs-grid">
+      <!-- Input 1: Load -->
+      <div class="input-card">
+        <div class="input-header">
+          <span class="input-label">1. Electrical Load</span>
+          <span class="input-val-display" id="disp-load">3000 W</span>
+        </div>
+        <input type="range" id="slider-load" class="input-slider" min="0" max="6000" step="50" value="3000">
+        <input type="number" id="num-load" class="input-number" min="0" max="6000" step="50" value="3000">
+      </div>
+
+      <!-- Input 2: Voltage -->
+      <div class="input-card">
+        <div class="input-header">
+          <span class="input-label">2. Terminal Voltage</span>
+          <span class="input-val-display" id="disp-v">412.0 V</span>
+        </div>
+        <input type="range" id="slider-v" class="input-slider" min="350" max="450" step="0.5" value="412">
+        <input type="number" id="num-v" class="input-number" min="300" max="460" step="0.1" value="412.0">
+      </div>
+
+      <!-- Input 3: Current -->
+      <div class="input-card">
+        <div class="input-header">
+          <span class="input-label">3. Phase Current</span>
+          <span class="input-val-display" id="disp-i">5.63 A</span>
+        </div>
+        <input type="range" id="slider-i" class="input-slider" min="0" max="12" step="0.05" value="5.63">
+        <input type="number" id="num-i" class="input-number" min="0" max="15" step="0.01" value="5.63">
+      </div>
+
+      <!-- Input 4: Speed -->
+      <div class="input-card">
+        <div class="input-header">
+          <span class="input-label">4. Engine Speed</span>
+          <span class="input-val-display" id="disp-n">1511 RPM</span>
+        </div>
+        <input type="range" id="slider-n" class="input-slider" min="1400" max="1600" step="1" value="1511">
+        <input type="number" id="num-n" class="input-number" min="1300" max="1700" step="1" value="1511">
+      </div>
+
+      <!-- Input 5: Manometer -->
+      <div class="input-card">
+        <div class="input-header">
+          <span class="input-label">5. Manometer (dhw)</span>
+          <span class="input-val-display" id="disp-dhw">136.0 mm</span>
+        </div>
+        <input type="range" id="slider-dhw" class="input-slider" min="120" max="160" step="0.5" value="136">
+        <input type="number" id="num-dhw" class="input-number" min="100" max="180" step="0.1" value="136.0">
+      </div>
+    </div>
+  </section>
+
+  <!-- TWO SEPARATE VISUALS FOR 50-STEP DATA AND 150-STEP DATA PREDICTIONS -->
+  <section class="dual-visuals-grid" aria-label="Separate Prediction Visuals">
+    
+    <!-- VISUAL 1: 50-Step Data ML Model Predictions -->
+    <article class="model-panel model-panel-50w" id="visual-panel-50w">
+      <div class="panel-header">
+        <div>
+          <h3 class="panel-title" style="color: var(--cyan-400);">🔵 Visual 1: 50W-Step Trained Model</h3>
+          <p class="panel-subtitle">Trained on dense 50W augmented grid (121 total samples, 90 train, 31 test)</p>
+        </div>
+        <div class="panel-meta-tags">
+          <span class="badge badge-cyan">R² = 0.9999</span>
+          <span class="badge badge-green">Formula Synchronized</span>
+        </div>
+      </div>
+
+      <!-- KPI Outputs -->
+      <div class="kpi-cards-grid">
+        <div class="kpi-card">
+          <span class="kpi-title">Brake Power (BP)</span>
+          <span class="kpi-value" id="kpi-50-bp">4.018 kW</span>
+          <span class="kpi-subtext" id="kpi-50-bp-sub">Formula: √3·V·I·cosΦ</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Fuel Rate (TFC)</span>
+          <span class="kpi-value" id="kpi-50-tfc" style="color: var(--cyan-400);">1.373 kg/h</span>
+          <span class="kpi-subtext" id="kpi-50-time">Time (t): 43.0 s</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Exhaust Gas Temp</span>
+          <span class="kpi-value" id="kpi-50-texg" style="color: #f87171;">195.0 °C</span>
+          <span class="kpi-subtext">Thermal Sensor Pred</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Brake Thermal Eff</span>
+          <span class="kpi-value" id="kpi-50-etabth" style="color: #34d399;">23.25 %</span>
+          <span class="kpi-subtext">ηbth = BP·3600/(TFC·CV)</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Spec Fuel (BSFC)</span>
+          <span class="kpi-value" id="kpi-50-bsfc">341.7 g/kWh</span>
+          <span class="kpi-subtext">(TFC·1000) / BP</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Mechanical Eff</span>
+          <span class="kpi-value" id="kpi-50-etam">47.51 %</span>
+          <span class="kpi-subtext">ηm = BP / (BP + 4.44)</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Volumetric Eff</span>
+          <span class="kpi-value" id="kpi-50-etav">77.30 %</span>
+          <span class="kpi-subtext">ηv = (Va / Vs)·100</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Air-Fuel Ratio</span>
+          <span class="kpi-value" id="kpi-50-afr">32.65</span>
+          <span class="kpi-subtext">AFR = ma,actual / TFC</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Indicated Power</span>
+          <span class="kpi-value" id="kpi-50-ip">8.458 kW</span>
+          <span class="kpi-subtext">IP = BP + 4.44 kW</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Indicated Thermal</span>
+          <span class="kpi-value" id="kpi-50-etai">48.94 %</span>
+          <span class="kpi-subtext">ηith = IP·3600/(TFC·CV)</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- VISUAL 2: 150-Step Data ML Model Predictions -->
+    <article class="model-panel model-panel-150w" id="visual-panel-150w">
+      <div class="panel-header">
+        <div>
+          <h3 class="panel-title" style="color: var(--orange-400);">🟠 Visual 2: 150W-Step Trained Model</h3>
+          <p class="panel-subtitle">Trained on standard 150W grid (41 total samples, 30 train, 11 test)</p>
+        </div>
+        <div class="panel-meta-tags">
+          <span class="badge badge-orange">R² = 0.9902</span>
+          <span class="badge badge-cyan" id="badge-delta">Live Variance Tracker</span>
+        </div>
+      </div>
+
+      <!-- KPI Outputs -->
+      <div class="kpi-cards-grid">
+        <div class="kpi-card">
+          <span class="kpi-title">Brake Power (BP)</span>
+          <span class="kpi-value" id="kpi-150-bp">4.018 kW</span>
+          <span class="delta-tag delta-good" id="delta-bp">Δ: 0.00 kW</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Fuel Rate (TFC)</span>
+          <span class="kpi-value" id="kpi-150-tfc" style="color: var(--orange-400);">1.373 kg/h</span>
+          <span class="delta-tag delta-good" id="delta-tfc">Δ: 0.000 kg/h</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Exhaust Gas Temp</span>
+          <span class="kpi-value" id="kpi-150-texg" style="color: #fb923c;">195.0 °C</span>
+          <span class="delta-tag delta-good" id="delta-texg">Δ: 0.0 °C</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Brake Thermal Eff</span>
+          <span class="kpi-value" id="kpi-150-etabth" style="color: #34d399;">23.25 %</span>
+          <span class="delta-tag delta-good" id="delta-etabth">Δ: 0.00 %</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Spec Fuel (BSFC)</span>
+          <span class="kpi-value" id="kpi-150-bsfc">341.7 g/kWh</span>
+          <span class="delta-tag delta-good" id="delta-bsfc">Δ: 0.0 g/kWh</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Mechanical Eff</span>
+          <span class="kpi-value" id="kpi-150-etam">47.51 %</span>
+          <span class="delta-tag delta-good" id="delta-etam">Δ: 0.00 %</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Volumetric Eff</span>
+          <span class="kpi-value" id="kpi-150-etav">77.30 %</span>
+          <span class="delta-tag delta-good" id="delta-etav">Δ: 0.00 %</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Air-Fuel Ratio</span>
+          <span class="kpi-value" id="kpi-150-afr">32.65</span>
+          <span class="delta-tag delta-good" id="delta-afr">Δ: 0.00</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Indicated Power</span>
+          <span class="kpi-value" id="kpi-150-ip">8.458 kW</span>
+          <span class="delta-tag delta-good" id="delta-ip">Δ: 0.00 kW</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Indicated Thermal</span>
+          <span class="kpi-value" id="kpi-150-etai">48.94 %</span>
+          <span class="delta-tag delta-good" id="delta-etai">Δ: 0.00 %</span>
+        </div>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- NAVIGATION TABS: ERROR CALCULATIONS, GRAPHS & FORMULAS -->
+  <nav class="nav-tabs" role="tablist">
+    <button class="tab-btn active" data-tab="tab-errors" role="tab" id="btn-tab-errors">📊 Error Calculations (Train & Test)</button>
+    <button class="tab-btn" data-tab="tab-charts" role="tab" id="btn-tab-charts">📈 Engine Characteristic Curves</button>
+    <button class="tab-btn" data-tab="tab-diagnostics" role="tab" id="btn-tab-diagnostics">🎯 Model Diagnostics & Actual vs Pred</button>
+    <button class="tab-btn" data-tab="tab-formulas" role="tab" id="btn-tab-formulas">📚 Engineering Formulas & Rig Specs</button>
+  </nav>
+
+  <!-- TAB PANE 1: ERROR CALCULATIONS -->
+  <section id="tab-errors" class="tab-pane active" role="tabpanel">
+    <div class="control-section">
+      <div class="section-title-row">
+        <h3 class="section-title">📊 Full Error Calculations Matrix: Train Set (75%) vs Test Set (25%)</h3>
+        <span class="badge badge-cyan">Independent Rigorous Validation</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+        Comparison of <strong>50W-Step Model</strong> vs <strong>150W-Step Model</strong> across all performance parameters.
+        Includes R² score, Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), Mean Squared Error (MSE), and Mean Absolute Percentage Error (MAPE).
+      </p>
+
+      <div class="table-container">
+        <table id="errors-table">
+          <thead>
+            <tr>
+              <th rowspan="2">Target Variable</th>
+              <th colspan="4" class="sub-50w">🔵 50W-Step Model (Train 75% | Test 25%)</th>
+              <th colspan="4" class="sub-150w">🟠 150W-Step Model (Train 75% | Test 25%)</th>
+            </tr>
+            <tr>
+              <th class="sub-50w">Train R²</th>
+              <th class="sub-50w">Test R²</th>
+              <th class="sub-50w">Test RMSE</th>
+              <th class="sub-50w">Test MAPE (%)</th>
+              <th class="sub-150w">Train R²</th>
+              <th class="sub-150w">Test R²</th>
+              <th class="sub-150w">Test RMSE</th>
+              <th class="sub-150w">Test MAPE (%)</th>
+            </tr>
+          </thead>
+          <tbody id="errors-tbody">
+            <!-- Populated dynamically by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Error Comparison Bar Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Test Set R² Score Benchmark (50W Model vs 150W Model)</h4>
+        </div>
+        <div id="chart-r2-comparison" class="plot-container-box"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB PANE 2: PERFORMANCE CURVES & PLOTS -->
+  <section id="tab-charts" class="tab-pane" role="tabpanel">
+    <div class="charts-grid">
+      <!-- Plot 1: Brake Thermal Efficiency vs Brake Power -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Brake Thermal Efficiency (ηbth) vs Brake Power</h4>
+        </div>
+        <div id="plot-bth-bp" class="plot-container-box"></div>
+      </div>
+
+      <!-- Plot 2: BSFC vs Brake Power -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Specific Fuel Consumption (BSFC) vs Brake Power</h4>
+        </div>
+        <div id="plot-bsfc-bp" class="plot-container-box"></div>
+      </div>
+
+      <!-- Plot 3: Willans Line -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Willans Line: Fuel Rate (TFC) vs Brake Power</h4>
+        </div>
+        <div id="plot-willans" class="plot-container-box"></div>
+      </div>
+
+      <!-- Plot 4: Exhaust Gas Temp vs Electrical Load -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Exhaust Gas Temp (Texg) vs Electrical Load</h4>
+        </div>
+        <div id="plot-texg-load" class="plot-container-box"></div>
+      </div>
+
+      <!-- Plot 5: Mechanical Efficiency vs Brake Power -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Mechanical Efficiency (ηm) vs Brake Power</h4>
+        </div>
+        <div id="plot-etam-bp" class="plot-container-box"></div>
+      </div>
+
+      <!-- Plot 6: Air-Fuel Ratio vs Electrical Load -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="chart-title">Air-Fuel Ratio (AFR) vs Electrical Load</h4>
+        </div>
+        <div id="plot-afr-load" class="plot-container-box"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB PANE 3: MODEL DIAGNOSTICS & ACTUAL VS PRED -->
+  <section id="tab-diagnostics" class="tab-pane" role="tabpanel">
+    <div class="control-section">
+      <div class="section-title-row">
+        <h3 class="section-title">🎯 Actual vs Predicted Scatter Plots (Train 75% & Test 25%)</h3>
+        <div>
+          <label for="select-diag-target" style="font-size: 0.85rem; color: var(--text-muted); margin-right: 8px;">Select Target:</label>
+          <select id="select-diag-target" class="chart-select">
+            <option value="TFC_kg_per_hr">TFC (kg/hr)</option>
+            <option value="Exhaust_Temp_C">Exhaust Temp (°C)</option>
+            <option value="Brake_Power_kW">Brake Power (kW)</option>
+            <option value="Brake_Thermal_Eff_pct">Brake Thermal Eff (%)</option>
+            <option value="Mechanical_Eff_pct">Mechanical Eff (%)</option>
+            <option value="Volumetric_Eff_pct">Volumetric Eff (%)</option>
+            <option value="Air_Fuel_Ratio">Air-Fuel Ratio</option>
+            <option value="Indicated_Power_kW">Indicated Power (kW)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dual-visuals-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h4 class="chart-title" style="color: var(--cyan-400);">🔵 50W-Step Model: Actual vs Predicted</h4>
+          </div>
+          <div id="plot-diag-50w" class="plot-container-box"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h4 class="chart-title" style="color: var(--orange-400);">🟠 150W-Step Model: Actual vs Predicted</h4>
+          </div>
+          <div id="plot-diag-150w" class="plot-container-box"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB PANE 4: FORMULAS REFERENCE -->
+  <section id="tab-formulas" class="tab-pane" role="tabpanel">
+    <div class="control-section">
+      <h3 class="section-title" style="margin-bottom: 16px;">📚 Engineering Formulae & Test Rig Specifications</h3>
+
+      <div class="formula-card">
+        <h4>1. Brake Power (BP)</h4>
+        <div class="formula-code">BP = (√3 × Voltage × Current × cos Φ) / 1000  [kW]</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Where cos Φ = 1.0 (pure resistive 3-phase load bank). At zero load, BP = 0.0 kW.</p>
+      </div>
+
+      <div class="formula-card">
+        <h4>2. Total Fuel Consumption (TFC) & Time (t)</h4>
+        <div class="formula-code">TFC = (Xcc × ρf × 3600) / (1000 × t) = 59.04 / t  [kg/hr]</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Fuel burette volume Xcc = 20 cc, diesel density ρf = 0.82 g/cc.</p>
+      </div>
+
+      <div class="formula-card">
+        <h4>3. Brake Specific Fuel Consumption (BSFC)</h4>
+        <div class="formula-code">BSFC = (TFC × 1000) / BP  [g/kWh]</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Represents the mass of fuel burned per kilowatt-hour of useful mechanical work delivered at the engine shaft.</p>
+      </div>
+
+      <div class="formula-card">
+        <h4>4. Brake Thermal Efficiency (ηbth)</h4>
+        <div class="formula-code">ηbth = (BP × 3600) / (TFC × CV) × 100  [%]</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Calorific value of diesel CV = 45,300 kJ/kg.</p>
+      </div>
+
+      <div class="formula-card">
+        <h4>5. Volumetric Efficiency (ηv) & Air Flow</h4>
+        <div class="formula-code">ha = (ρw / ρair) × (Δhw / 1000)  [m air column]</div>
+        <div class="formula-code">Va = Cd × Ao × √(2 × g × ha) × 3600  [m³/hr]</div>
+        <div class="formula-code">Vs = 2 × [(π / 4) × D² × L × (N / 2) × 60]  [m³/hr]</div>
+        <div class="formula-code">ηv = (Va / Vs) × 100  [%]</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Bore D = 87.5 mm, Stroke L = 110 mm, Orifice do = 20 mm, Cd = 0.62, ρair = 1.176 kg/m³.</p>
+      </div>
+
+      <div class="formula-card">
+        <h4>6. Mechanical Efficiency (ηm) & Willans Line</h4>
+        <div class="formula-code">Friction Power (FP) = 4.44 kW (Willans line intercept)</div>
+        <div class="formula-code">Indicated Power (IP) = BP + FP  [kW]</div>
+        <div class="formula-code">ηm = (BP / IP) × 100  [%]</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>4-Stroke Twin Cylinder CI Engine ML Predictive Intelligence System • Antigravity AI Engine</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="data.js"></script>
+  <script src="physics.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

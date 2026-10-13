@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary office files
+~$*
+*.tmp
+
+# Large binary document drafts not needed for Netlify static site
+*.docx
+*.doc
+*.xlsx
+
+# Python model checkpoints
+*.joblib
+
+# MATLAB scripts
+*.m
+
+# Operating System Files
+.DS_Store
+Thumbs.db
